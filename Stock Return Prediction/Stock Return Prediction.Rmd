@@ -1,0 +1,281 @@
+---
+title: "PREDICT STOCK RETURN"
+output:
+  pdf_document: default
+  html_document: default
+date: "2022-11-11"
+---
+```{r}
+library(ranger)
+library(dplyr)
+library(tidymodels)
+library(tidyverse)
+library(caret)
+library(roll)
+```
+
+Loading Data file
+
+```{r}
+setwd("D:/UNI/COURSES/Big Data with application to Finance/FIE423/merged/RET")
+
+load("merged.RData")
+
+```
+
+Wrangling Data
+```{r}
+data <- merged %>% 
+  filter(date < 20200101 ) %>% 
+  transmute(PERMNO,
+            date,
+            RET,
+            RET1 = lag(RET,1),
+            RET2 = lag(RET,2),
+            market_cap = MARKETCAP,
+            price1 = lag(PRC),
+            asset = atq,
+            liability = ltq,
+            book_value = coalesce(seqq, ceqq + pstkq, atq - ltq) + 
+               coalesce(txditcq, txdbq + intaccq, 0) - 
+               coalesce(pstkrq, pstknq, pstkq, 0),
+            cash = chq,
+            revenue = revtq,
+            earning = req,
+            EPS = epsf12,
+            book_to_market = book_value/MARKETCAP,
+            PE = PRC / lag(epsf12),
+            volume = lag(VOL)
+  ) %>% drop_na()
+
+head(data,10)
+```
+```{r}
+summary(data)
+```
+```{r}
+#calculate NA of each variable
+
+sapply(data, function(x) sum(is.na(x)))
+
+```
+Creating New Variable
+
+```{r}
+data$vol6 <- roll_mean(data$volume, width = 6)
+data$vol12 <- roll_mean(data$volume, width = 12)
+data$price6 <- roll_mean(data$price1, width = 6)
+data$price12 <- roll_mean(data$price1, width = 12)
+```
+
+
+Our target in this project is to predict stock return by using supervised machine learning. Even though our dataset is time-series and many features in the raw dataset have global trends with respect to time, taking percentage change between consecutive observations for all features will provide us better prediction.
+
+```{r}
+data <- data %>% transmute(PERMNO,
+                         date,
+                         RET,
+                         delta_RET1 = (RET1 - lag(RET1))*100/lag(RET2),
+                         delta_RET2 = (RET2 - lag(RET2))*100/lag(RET2),
+                         delta_market_cap = (market_cap - lag(market_cap))*100/lag(market_cap),
+                         delta_price1 = (price1 - lag(price1))*100/lag(price1),
+                         delta_asset = (asset - lag(asset))*100/lag(asset),
+                         delta_liability = (liability - lag(liability))*100/lag(liability),
+                         delta_book_value = (book_value - lag(book_value))*100/lag(book_value),
+                         delta_cash = (cash - lag(cash))*100/lag(cash),
+                         delta_revenue = (revenue - lag(revenue))*100/lag(revenue),
+                         delta_earning = (earning - lag(earning))*100/lag(earning),
+                         delta_EPS = (EPS - lag(EPS))*100/lag(EPS),
+                         delta_book_to_market = (book_to_market - lag(book_to_market))*100/lag(book_to_market),
+                         delta_PE = (PE - lag(PE))*100/lag(PE),
+                         delta_volume = (volume - lag(volume))*100/lag(volume),
+                         delta_vol6 = (vol6 - lag(vol6))*100/lag(vol6),
+                         delta_vol12 = (vol12 - lag(vol12))*100/lag(vol12),
+                         delta_price6 = (price6 - lag(price6))*100/lag(price6),
+                         delta_price12 = (price12 - lag(price12))*100/lag(price12)) %>% drop_na()
+```
+
+
+```{r}
+#drop NA and infinite value
+data <- data %>% filter(!is.infinite(delta_RET1)) %>% 
+                 filter(!is.infinite(delta_RET2)) %>%
+                 filter(!is.infinite(delta_revenue)) %>%
+                 filter(!is.infinite(delta_liability)) %>%
+                 filter(!is.infinite(delta_earning)) %>%
+                 filter(!is.infinite(delta_cash)) %>%
+                 filter(!is.infinite(delta_EPS)) %>%
+                 filter(!is.infinite(delta_book_to_market)) %>%
+                 filter(!is.infinite(delta_PE)) %>%
+                 filter(!is.infinite(delta_volume)) %>% as.data.frame()
+```
+
+In order to improve performance of model, we will standardize all independent features as follows
+
+```{r}
+data1 <- data %>% transmute(PERMNO,
+                         date,
+                         RET = (RET - mean(RET))/sd(RET),
+                         delta_RET1 = (delta_RET1 - mean(delta_RET1))/sd(delta_RET1),
+                         delta_RET2 = (delta_RET2 - mean(delta_RET2))/sd(delta_RET2),
+                         delta_market_cap = (delta_market_cap - mean(delta_market_cap))/sd(delta_market_cap),
+                         delta_price1 = (delta_price1 - mean(delta_price1))/sd(delta_price1),
+                         delta_asset = (delta_asset - mean(delta_asset))/sd(delta_asset),
+                         delta_liability = (delta_liability - mean(delta_liability))/sd(delta_liability),
+                         delta_book_value = (delta_book_value - mean(delta_book_value))/sd(delta_book_value),
+                         delta_cash = (delta_cash - mean(delta_cash))/sd(delta_cash),
+                         delta_revenue = (delta_revenue - mean(delta_revenue))/sd(delta_revenue),
+                         delta_earning = (delta_earning - mean(delta_earning))/sd(delta_earning),
+                         delta_EPS = (delta_EPS - mean(delta_EPS))/sd(delta_EPS),
+                         delta_book_to_market = (delta_book_to_market - mean(delta_book_to_market))/sd(delta_book_to_market),
+                         delta_PE = (delta_PE - mean(delta_PE))/sd(delta_PE),
+                         delta_volume = (delta_volume - mean(delta_volume))/sd(delta_volume),
+                         delta_vol6 = (delta_vol6 - mean(delta_vol6))/sd(delta_vol6),
+                         delta_vol12 = (delta_vol12 - mean(delta_vol12))/sd(delta_vol12),
+                         delta_price6 = (delta_price6 - mean(delta_price6))/sd(delta_price6),
+                         delta_price12 = (delta_price12 - mean(delta_price12))/sd(delta_price12))   
+```
+
+
+```{r}
+summary(data1)
+```
+
+From the time series perspective, we split data into training set (31/01/2011 - 01/01/2027) and testing set (01/01/2017 - 31/12/2020)
+
+```{r}
+train <- data1 %>% filter(date < "2017-01-01")
+test <- data1 %>% filter(date >= "2017-01-01")
+```
+
+LOGISTICS REGRESSION
+
+```{r}
+#Build model
+formula <- RET ~ delta_RET1 + delta_RET2 + delta_market_cap + delta_price1 +
+    delta_asset + delta_liability + delta_book_value + 
+    delta_cash + delta_revenue + delta_earning + delta_EPS + 
+    delta_book_to_market + delta_PE + delta_volume + delta_vol6 + 
+    delta_vol12 + delta_price6 + delta_price12
+
+fitted_logistic <- glm(formula,
+  data = train, family = "gaussian")
+
+```
+
+```{r}
+#Use model to make prediction 
+
+prediction <- fitted_logistic  %>% 
+  predict(test) %>% 
+  as.data.frame() %>%
+  mutate(truth = test$RET)
+```
+
+
+```{r}
+#Measure the prediction performance
+
+RMSE(prediction$truth, prediction$.) 
+MAE(prediction$truth, prediction$.) 
+cor(prediction$truth, prediction$.)^2 #R-squared
+```
+For logistics regression, RMSE: 1.061, MAE: 0.629, R2: 8.09e-07
+
+RANDOM FOREST
+
+```{r}
+#tuning parameters
+
+recipe <- train %>% 
+    recipe(RET ~ delta_RET1 + delta_RET2 + delta_market_cap + delta_price1 +
+    delta_asset + delta_liability + delta_book_value + 
+    delta_cash + delta_revenue + delta_earning + delta_EPS + 
+    delta_book_to_market + delta_PE + delta_volume + delta_vol6 + 
+    delta_vol12 + delta_price6 + delta_price12)
+
+data_folds <- vfold_cv(train, v = 10)
+
+forest_mod <- 
+  rand_forest(
+    trees = 250,
+    mtry = tune(),
+    min_n = tune()) %>%
+  set_mode("regression") %>% 
+  set_engine("ranger")
+
+forest_workflow <- 
+  workflow(recipe, forest_mod)
+
+params <- parameters(min_n(range = c(0,20)),
+                     mtry(range = c(0,20)))
+
+forest_grid <- grid_max_entropy(params,
+                         size = 10)
+
+#tuning <- forest_workflow %>% 
+#  tune_grid(
+#   resamples = data_folds,
+#    grid = forest_grid,
+#    metrics = metric_set(mape,mae),
+#    control = control_grid(save_pred = TRUE)
+#  )
+
+#params_best <- select_best(tuning, "mae")
+
+```
+
+```{r}
+#Random forest model with best params
+forest_mod <- 
+  rand_forest(
+    trees = 250,
+    mtry = 7,
+    min_n = 3) %>%
+  set_mode("regression") %>% 
+  set_engine("ranger")
+
+forest_workflow <- 
+  workflow(recipe, forest_mod)
+
+final_model <- fit(forest_workflow, train)
+
+```
+
+```{r}
+#Use optimal model to make prediction
+
+prediction <- final_model %>% predict(new_data = test) %>%
+  mutate(truth = test$RET,
+         company = test$PERMNO)
+```
+
+```{r}
+#Measure the prediction performance
+
+RMSE(prediction$truth, prediction$.pred) 
+MAE(prediction$truth, prediction$.pred) 
+cor(prediction$truth, prediction$.pred)^2 
+
+```
+For Random forest, RMSE: 0.767, MAE: 0.328, R2: 0.45
+
+Based on calculated metrics above, it is easy to conclude that random forest is best model to predict return because its RMSE and MAE are lower than those of logistics regression while its R2 is higher.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
