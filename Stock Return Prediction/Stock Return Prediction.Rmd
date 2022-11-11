@@ -69,7 +69,9 @@ data$price12 <- roll_mean(data$price1, width = 12)
 ```
 
 
-Our target in this project is to predict stock return by using supervised machine learning. Even though our dataset is time-series and many features in the raw dataset have global trends with respect to time, taking percentage change between consecutive observations for all features will provide us better prediction.
+Our target in this project is to predict stock return by using supervised machine learning.
+Even though our dataset is time-series and many features in the raw dataset have global trends with respect to time, 
+taking percentage change between consecutive observations for all features will provide us better prediction.
 
 ```{r}
 data <- data %>% transmute(PERMNO,
@@ -141,7 +143,8 @@ data1 <- data %>% transmute(PERMNO,
 summary(data1)
 ```
 
-From the time series perspective, we split data into training set (31/01/2011 - 01/01/2027) and testing set (01/01/2017 - 31/12/2020)
+From the time series perspective, we split data into training set (31/01/2011 - 01/01/2027)
+and testing set (01/01/2017 - 31/12/2020)
 
 ```{r}
 train <- data1 %>% filter(date < "2017-01-01")
@@ -260,7 +263,8 @@ cor(prediction$truth, prediction$.pred)^2
 ```
 For Random forest, RMSE: 0.767, MAE: 0.328, R2: 0.45
 
-Based on calculated metrics above, it is easy to conclude that random forest is best model to predict return because its RMSE and MAE are lower than those of logistics regression while its R2 is higher.
+Based on calculated metrics above, it is easy to conclude that random forest is best model to predict return 
+because its RMSE and MAE are lower than those of logistics regression while its R2 is higher.
 
 
 
