@@ -1,4 +1,4 @@
-#1. Project objective
+# 1. Project objective
    
 The prediction of stock return has always been one of the most popular topics among investors. Many methods have been implemented to analyze stock performance and predict market trends to help investors invest in stocks which generate most profit.
 When it comes to evaluating stocks, there are 3 main types of techniques which can be used by investors to predict stock return.
@@ -7,15 +7,15 @@ When it comes to evaluating stocks, there are 3 main types of techniques which c
 - Sentiment Analysis: By analyzing company financial reports or financial news of the overall market, analyst can understand the attitude or sentiment of investors toward stocks.
 This project will focus on using technical analysis and fundamental analysis to predict stock trend and help investors make wise investment decisions
 
-2. Data and Methodology
+# 2. Data and Methodology
    
-2.1 Data
+## 2.1 Data
 Data used in this project is derived from Wharton Research Data Services’ database – “compustat” and Center for Research in Security Prices – “CRSP”. This dataset covers period from 31 Jan 2011 to 31 December 2020. 
 
-2.2 Modeling
+## 2.2 Modeling
 This project will build two machine learning models, logistics regression and random forest to predict stock return.
 
-2.3 Variable
+## 2.3 Variable
 To predict the return of stock, we use original 11 variables 
 - RET1: return in the past month
 - RET2: return in the past 2 months
@@ -37,5 +37,5 @@ and create 7 new variables
 - price6: average price over the past 6 months
 - price12: average price over the past 12 months
 
-2.4 Model evaluation
+## 2.4 Model evaluation
 After building models and predicting return from each model, we will calculate RMSE, MAE, R-squared to select the best model to predict return
