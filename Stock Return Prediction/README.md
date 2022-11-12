@@ -1,4 +1,4 @@
-1. Project objective
+#1. Project objective
    
 The prediction of stock return has always been one of the most popular topics among investors. Many methods have been implemented to analyze stock performance and predict market trends to help investors invest in stocks which generate most profit.
 When it comes to evaluating stocks, there are 3 main types of techniques which can be used by investors to predict stock return.
