@@ -17,7 +17,7 @@ library(roll)
 Loading Data file
 
 ```{r}
-setwd("D:/UNI/COURSES/Big Data with application to Finance/FIE423/merged/RET")
+setwd("D:/UNI/RET")
 
 load("merged.RData")
 
