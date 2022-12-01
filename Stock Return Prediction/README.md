@@ -5,7 +5,8 @@ When it comes to evaluating stocks, there are 3 main types of techniques which c
 - Technical analysis: Stock return is forecasted based on historical price movement, trading volume, trend, and other aspects of past trading activities.
 - Fundamental analysis: Fundamental analysis takes in account financial factors of the company such as size, company value, book to market,… to assess investment of stocks 
 - Sentiment Analysis: By analyzing company financial reports or financial news of the overall market, analyst can understand the attitude or sentiment of investors toward stocks.
-This project will focus on using technical analysis and fundamental analysis to predict stock trend and help investors make wise investment decisions
+
+This project will focus on using technical analysis and fundamental analysis to predict stock trend and help investors make wise investment decisions. R-language is used in this project.
 
 # 2. Data and Methodology
    
